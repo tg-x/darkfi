@@ -248,7 +248,7 @@ impl ValidatorState {
     /// Find slot leader, using a simple hash method.
     /// Leader calculation is based on how many nodes are participating
     /// in the network.
-    pub fn slot_leader(&mut self) -> Address {
+    pub fn slot_leader(&mut self) -> Participant {
         let slot = self.current_slot();
         // DefaultHasher is used to hash the slot number
         // because it produces a number string which then can be modulated by the len.
@@ -258,13 +258,13 @@ impl ValidatorState {
         let pos = hasher.finish() % (self.consensus.participants.len() as u64);
         // Since BTreeMap orders by key in asceding order, each node will have
         // the same key in calculated position.
-        self.consensus.participants.iter().nth(pos as usize).unwrap().1.address
+        self.consensus.participants.iter().nth(pos as usize).unwrap().1.clone()
     }
 
     /// Check if we're the current slot leader
     pub fn is_slot_leader(&mut self) -> bool {
         let address = self.address;
-        address == self.slot_leader()
+        address == self.slot_leader().address
     }
 
     /// Generate a block proposal for the current slot, containing all
@@ -294,7 +294,6 @@ impl ValidatorState {
         let signed_proposal = self.secret.sign(&header.headerhash().as_bytes()[..]);
 
         Ok(Some(BlockProposal::new(
-            self.public,
             signed_proposal,
             self.address,
             header,
@@ -371,20 +370,19 @@ impl ValidatorState {
         self.refresh_participants()?;
 
         let leader = self.slot_leader();
-        if leader != proposal.address {
+        if leader.address != proposal.address {
             warn!(
                 "Received proposal not from slot leader ({}), but from ({})",
-                leader,
-                proposal.address.to_string()
+                leader.address, proposal.address
             );
             return Ok(None)
         }
 
-        if !proposal
+        if !leader
             .public_key
             .verify(proposal.block.header.headerhash().as_bytes(), &proposal.signature)
         {
-            warn!("Proposer ({}) signature could not be verified", proposal.address.to_string());
+            warn!("Proposer ({}) signature could not be verified", proposal.address);
             return Ok(None)
         }
 
@@ -438,13 +436,7 @@ impl ValidatorState {
         }
 
         let signed_hash = self.secret.sign(&serialize(&proposal_hash));
-        Ok(Some(Vote::new(
-            self.public,
-            signed_hash,
-            proposal_hash,
-            proposal.block.header.slot,
-            self.address,
-        )))
+        Ok(Some(Vote::new(signed_hash, proposal_hash, proposal.block.header.slot, self.address)))
     }
 
     /// Verify if the provided chain is notarized excluding the last block.
@@ -528,19 +520,6 @@ impl ValidatorState {
             None => return Ok((false, None)),
         }
 
-        let mut encoded_proposal = vec![];
-
-        if let Err(e) = vote.proposal.encode(&mut encoded_proposal) {
-            error!("consensus: Proposal encoding failed: {:?}", e);
-            return Ok((false, None))
-        };
-
-        let va = vote.address.to_string();
-        if !vote.public_key.verify(&encoded_proposal, &vote.vote) {
-            warn!("consensus: Voter ({}), signature couldn't be verified", va);
-            return Ok((false, None))
-        }
-
         // Node refreshes participants records
         self.refresh_participants()?;
         let node_count = self.consensus.participants.len();
@@ -549,8 +528,21 @@ impl ValidatorState {
         match self.consensus.participants.get(&vote.address) {
             Some(participant) => {
                 let mut participant = participant.clone();
+                let va = vote.address;
                 if current_slot <= participant.joined {
                     warn!("consensus: Voter ({}) joined after current slot.", va);
+                    return Ok((false, None))
+                }
+
+                let mut encoded_proposal = vec![];
+
+                if let Err(e) = vote.proposal.encode(&mut encoded_proposal) {
+                    error!("consensus: Proposal encoding failed: {:?}", e);
+                    return Ok((false, None))
+                };
+
+                if !participant.public_key.verify(&encoded_proposal, &vote.vote) {
+                    warn!("consensus: Voter ({}), signature couldn't be verified", va);
                     return Ok((false, None))
                 }
 
@@ -764,8 +756,8 @@ impl ValidatorState {
                 let serialized = serialize(&participant.address);
                 if !participant.public_key.verify(&serialized, &keep_alive.signature) {
                     warn!(
-                        "Keep alive message signature could not be verified for: {:?}",
-                        keep_alive.address.to_string()
+                        "Keep alive message signature could not be verified for: {}",
+                        keep_alive.address
                     );
                     return false
                 }
@@ -823,8 +815,8 @@ impl ValidatorState {
         };
 
         debug!(
-            "refresh_participants(): Node {:?} checking slots: previous - {:?}, last - {:?}, previous from last - {:?}",
-            self.address.to_string(), previous_slot, last_slot, previous_from_last_slot
+            "refresh_participants(): Node {} checking slots: previous - {:?}, last - {:?}, previous from last - {:?}",
+            self.address, previous_slot, last_slot, previous_from_last_slot
         );
 
         let leader = self.slot_leader();
@@ -833,8 +825,8 @@ impl ValidatorState {
                 Some(slot) => {
                     if (current - slot) > QUARANTINE_DURATION {
                         warn!(
-                            "refresh_participants(): Removing participant: {:?} (joined {:?}, voted {:?})",
-                            participant.address.to_string(),
+                            "refresh_participants(): Removing participant: {} (joined {:?}, voted {:?})",
+                            participant.address,
                             participant.joined,
                             participant.voted
                         );
@@ -844,10 +836,10 @@ impl ValidatorState {
                 None => {
                     // Slot leader is always quarantined, to cover the case they become inactive the slot before
                     // becoming the leader. This can be used for slashing in the future.
-                    if participant.address == leader {
+                    if participant.address == leader.address {
                         debug!(
-                            "refresh_participants(): Quaranteening leader: {:?} (joined {:?}, voted {:?})",
-                            participant.address.to_string(),
+                            "refresh_participants(): Quaranteening leader: {} (joined {:?}, voted {:?})",
+                            participant.address,
                             participant.joined,
                             participant.voted
                         );
@@ -858,8 +850,8 @@ impl ValidatorState {
                         Some(slot) => {
                             if slot < last_slot {
                                 warn!(
-                                    "refresh_participants(): Quaranteening participant: {:?} (joined {:?}, voted {:?})",
-                                    participant.address.to_string(),
+                                    "refresh_participants(): Quaranteening participant: {} (joined {:?}, voted {:?})",
+                                    participant.address,
                                     participant.joined,
                                     participant.voted
                                 );
@@ -872,8 +864,8 @@ impl ValidatorState {
                                     participant.joined < previous_from_last_slot)
                             {
                                 warn!(
-                                    "refresh_participants(): Quaranteening participant: {:?} (joined {:?}, voted {:?})",
-                                    participant.address.to_string(),
+                                    "refresh_participants(): Quaranteening participant: {} (joined {:?}, voted {:?})",
+                                    participant.address,
                                     participant.joined,
                                     participant.voted
                                 );
