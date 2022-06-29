@@ -38,6 +38,7 @@ use darkfi::{
         expand_path,
         path::get_config_path,
         time::check_clock,
+        NetworkName,
     },
     wallet::walletdb::init_wallet,
     Error, Result,
@@ -290,7 +291,7 @@ async fn realmain(args: Args, ex: Arc<Executor<'_>>) -> Result<()> {
         &sled_db,
         genesis_ts,
         genesis_data,
-        client,
+        client.clone(),
         cashier_pubkeys,
         faucet_pubkeys,
     )
@@ -338,6 +339,19 @@ async fn realmain(args: Args, ex: Arc<Executor<'_>>) -> Result<()> {
         if !args.consensus {
             None
         } else {
+            // Retrieving node balance to verify if they can participate in consensus
+            // TODO: replace DRK with sDRK
+            let token_id = client.tokenlist.by_net[&NetworkName::DarkFi]
+                .get("DRK".to_string())
+                .unwrap()
+                .drk_address;
+            let balance = client.get_balance(token_id).await?;
+            // 0.42 in base 10 with 8 decimals
+            if balance.value < 42000000 {
+                error!("Node DRK balance: {}", balance.value);
+                return Err(Error::WalletInsufficientBalance)
+            }
+
             info!("Registering consensus P2P protocols...");
             let consensus_network_settings = net::Settings {
                 inbound: args.consensus_p2p_accept,

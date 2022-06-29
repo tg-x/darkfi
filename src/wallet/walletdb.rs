@@ -367,6 +367,27 @@ impl WalletDb {
         Ok(())
     }
 
+    pub async fn get_balance(&self, token_id: DrkTokenId) -> Result<Balance> {
+        debug!("Getting balance of token ID");
+
+        let is_spent = 0;
+        let id = serialize(&token_id);
+
+        let mut conn = self.conn.acquire().await?;
+        let row =
+            sqlx::query("SELECT value, drk_address, nullifier FROM coins WHERE drk_address = ?1 AND is_spent = ?2;")
+                .bind(id)
+                .bind(is_spent)
+                .fetch_one(&mut conn)
+                .await?;
+
+        let value = deserialize(row.get("value"))?;
+        let token_id = deserialize(row.get("drk_address"))?;
+        let nullifier = deserialize(row.get("nullifier"))?;
+
+        Ok(Balance { token_id, value, nullifier })
+    }
+
     pub async fn get_balances(&self) -> Result<Balances> {
         debug!("Getting tokens and balances");
         let is_spent = 0;
