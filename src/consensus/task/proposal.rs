@@ -1,8 +1,10 @@
 use std::time::Duration;
 
+use async_executor::Executor;
+use async_std::sync::Arc;
 use log::{debug, error, info};
 
-use super::consensus_sync_task;
+use super::{consensus_sync_task, keep_alive_task};
 use crate::{
     consensus::{Participant, ValidatorStatePtr},
     net::P2pPtr,
@@ -10,10 +12,15 @@ use crate::{
 };
 
 /// async task used for participating in the consensus protocol
-pub async fn proposal_task(consensus_p2p: P2pPtr, sync_p2p: P2pPtr, state: ValidatorStatePtr) {
+pub async fn proposal_task(
+    consensus_p2p: P2pPtr,
+    sync_p2p: P2pPtr,
+    state: ValidatorStatePtr,
+    ex: Arc<Executor<'_>>,
+) {
     // Node waits just before the current or next slot end, so it can
     // start syncing latest state.
-    let mut seconds_until_next_slot = state.read().await.next_slot_start();
+    let mut seconds_until_next_slot = state.read().await.next_n_slot_start(1);
     let one_sec = Duration::new(1, 0);
 
     loop {
@@ -24,7 +31,7 @@ pub async fn proposal_task(consensus_p2p: P2pPtr, sync_p2p: P2pPtr, state: Valid
 
         info!("consensus: Waiting for next slot ({:?} sec)", seconds_until_next_slot);
         sleep(seconds_until_next_slot.as_secs()).await;
-        seconds_until_next_slot = state.read().await.next_slot_start();
+        seconds_until_next_slot = state.read().await.next_n_slot_start(1);
     }
 
     info!("consensus: Waiting for next slot ({:?} sec)", seconds_until_next_slot);
@@ -39,14 +46,21 @@ pub async fn proposal_task(consensus_p2p: P2pPtr, sync_p2p: P2pPtr, state: Valid
     };
 
     // Node signals the network that it will start participating
+    let public = state.read().await.public;
     let address = state.read().await.address;
     let cur_slot = state.read().await.current_slot();
-    let participant = Participant::new(address, cur_slot);
+    let participant = Participant::new(public, address, cur_slot);
     state.write().await.append_participant(participant.clone());
 
     match consensus_p2p.broadcast(participant).await {
         Ok(()) => info!("consensus: Participation message broadcasted successfully."),
         Err(e) => error!("Failed broadcasting consensus participation: {}", e),
+    }
+
+    // Node initiates the background task to send keep alive messages
+    match keep_alive_task(consensus_p2p.clone(), state.clone(), ex).await {
+        Ok(()) => info!("consensus: Keep alive background task initiated successfully."),
+        Err(e) => error!("Failed to initiate keep alive background task: {}", e),
     }
 
     // Node modifies its participating slot to next.
@@ -56,7 +70,7 @@ pub async fn proposal_task(consensus_p2p: P2pPtr, sync_p2p: P2pPtr, state: Valid
     }
 
     loop {
-        let seconds_next_slot = state.read().await.next_slot_start().as_secs();
+        let seconds_next_slot = state.read().await.next_n_slot_start(1).as_secs();
         info!("consensus: Waiting for next slot ({} sec)", seconds_next_slot);
         sleep(seconds_next_slot).await;
 

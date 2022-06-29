@@ -13,7 +13,7 @@ use log::{debug, error, info, warn};
 use rand::rngs::OsRng;
 
 use super::{
-    Block, BlockInfo, BlockProposal, Header, Metadata, Participant, ProposalChain,
+    Block, BlockInfo, BlockProposal, Header, KeepAlive, Metadata, Participant, ProposalChain,
     StreamletMetadata, Vote,
 };
 use crate::{
@@ -226,11 +226,11 @@ impl ValidatorState {
         Ok(last_slot)
     }
 
-    /// Calculates seconds until next slot starting time.
-    /// Slots durationis configured using the delta value.
-    pub fn next_slot_start(&self) -> Duration {
+    /// Calculates seconds until next Nth slot starting time.
+    /// Slots duration is configured using the delta value.
+    pub fn next_n_slot_start(&self, n: u64) -> Duration {
         let start_time = NaiveDateTime::from_timestamp(self.consensus.genesis_ts.0, 0);
-        let current_slot = self.current_slot() + 1;
+        let current_slot = self.current_slot() + n;
         let next_slot_start = (current_slot * (2 * DELTA)) + (start_time.timestamp() as u64);
         let next_slot_start = NaiveDateTime::from_timestamp(next_slot_start as i64, 0);
         let current_time = NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0);
@@ -750,6 +750,31 @@ impl ValidatorState {
         true
     }
 
+    /// Update participant seen.
+    pub fn participant_keep_alive(&mut self, keep_alive: KeepAlive) -> bool {
+        match self.consensus.participants.get(&keep_alive.address) {
+            None => {
+                warn!(
+                    "Keep alive message from unknown participant: {}",
+                    keep_alive.address.to_string()
+                );
+                false
+            }
+            Some(participant) => {
+                let serialized = serialize(&participant.address);
+                if !participant.public_key.verify(&serialized, &keep_alive.signature) {
+                    warn!(
+                        "Keep alive message signature could not be verified for: {:?}",
+                        keep_alive.address.to_string()
+                    );
+                    return false
+                }
+                // TODO: Add participant seen update here
+                true
+            }
+        }
+    }
+
     /// Refresh the participants map, to retain only the active ones.
     /// Active nodes are considered those that joined previous slot
     /// or on the slot the last proposal was generated, either voted
@@ -866,7 +891,7 @@ impl ValidatorState {
 
         if self.consensus.participants.is_empty() {
             // If no nodes are active, node becomes a single node network.
-            let participant = Participant::new(self.address, self.current_slot());
+            let participant = Participant::new(self.public, self.address, self.current_slot());
             self.consensus.participants.insert(participant.address, participant);
         }
 

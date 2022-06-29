@@ -8,7 +8,7 @@ pub use metadata::{Metadata, StreamletMetadata};
 
 /// Consensus participant
 pub mod participant;
-pub use participant::Participant;
+pub use participant::{KeepAlive, Participant};
 
 /// Consensus vote
 pub mod vote;
