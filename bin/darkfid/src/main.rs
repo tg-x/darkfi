@@ -345,12 +345,19 @@ async fn realmain(args: Args, ex: Arc<Executor<'_>>) -> Result<()> {
                 .get("DRK".to_string())
                 .unwrap()
                 .drk_address;
-            let balance = client.get_balance(token_id).await?;
-            // 0.42 in base 10 with 8 decimals
-            if balance.value < 42000000 {
-                error!("Node DRK balance: {}", balance.value);
-                return Err(Error::WalletInsufficientBalance)
-            }
+            match client.get_balance(token_id).await? {
+                Some(balance) => {
+                    // 0.42 in base 10 with 8 decimals
+                    if balance.value < 42000000 {
+                        error!("Node DRK balance: {}", balance.value);
+                        return Err(Error::WalletInsufficientBalance)
+                    }
+                }
+                None => {
+                    error!("Node has 0 DRK.");
+                    return Err(Error::WalletInsufficientBalance)
+                }
+            };
 
             info!("Registering consensus P2P protocols...");
             let consensus_network_settings = net::Settings {

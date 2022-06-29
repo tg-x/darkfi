@@ -214,7 +214,7 @@ impl Client {
         Ok(Address::from(kp.public))
     }
 
-    pub async fn get_balance(&self, token_id: DrkTokenId) -> Result<Balance> {
+    pub async fn get_balance(&self, token_id: DrkTokenId) -> Result<Option<Balance>> {
         self.wallet.get_balance(token_id).await
     }
 
