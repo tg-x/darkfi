@@ -11,11 +11,18 @@ pub struct Metadata {
     pub rand_seed: String,
     /// Block owner signature
     pub signature: String,
+    /// Nodes participating in the consensus process
+    pub participants: Vec<Participant>,
 }
 
 impl Metadata {
-    pub fn new(proof: String, rand_seed: String, signature: String) -> Self {
-        Self { proof, rand_seed, signature }
+    pub fn new(
+        proof: String,
+        rand_seed: String,
+        signature: String,
+        participants: Vec<Participant>,
+    ) -> Self {
+        Self { proof, rand_seed, signature, participants }
     }
 }
 
@@ -29,12 +36,10 @@ pub struct StreamletMetadata {
     pub notarized: bool,
     /// Block finalization flag
     pub finalized: bool,
-    /// Nodes participated in the voting process
-    pub participants: Vec<Participant>,
 }
 
 impl StreamletMetadata {
-    pub fn new(participants: Vec<Participant>) -> Self {
-        Self { votes: vec![], notarized: false, finalized: false, participants }
+    pub fn new() -> Self {
+        Self { votes: vec![], notarized: false, finalized: false }
     }
 }

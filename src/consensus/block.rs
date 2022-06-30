@@ -86,7 +86,8 @@ impl Block {
     /// Generate the genesis block.
     pub fn genesis_block(genesis_ts: Timestamp, genesis_data: blake3::Hash) -> Self {
         let header = Header::genesis_header(genesis_ts, genesis_data);
-        let metadata = Metadata::new(String::from("proof"), String::from("r"), String::from("s"));
+        let metadata =
+            Metadata::new(String::from("proof"), String::from("r"), String::from("s"), vec![]);
 
         Self::new(header.headerhash(), vec![], metadata)
     }

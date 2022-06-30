@@ -287,9 +287,14 @@ impl ValidatorState {
         let header =
             Header::new(prev_hash, self.slot_epoch(slot), slot, Timestamp::current_time(), root);
 
-        let metadata = Metadata::new(String::from("proof"), String::from("r"), String::from("s"));
+        let metadata = Metadata::new(
+            String::from("proof"),
+            String::from("r"),
+            String::from("s"),
+            self.consensus.participants.values().cloned().collect(),
+        );
 
-        let sm = StreamletMetadata::new(self.consensus.participants.values().cloned().collect());
+        let sm = StreamletMetadata::new();
 
         let signed_proposal = self.secret.sign(&header.headerhash().as_bytes()[..]);
 

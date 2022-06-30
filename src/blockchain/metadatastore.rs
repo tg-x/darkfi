@@ -25,12 +25,7 @@ impl StreamletMetadataStore {
         if store.0.is_empty() {
             let genesis_block = Block::genesis_block(genesis_ts, genesis_data);
 
-            let metadata = StreamletMetadata {
-                votes: vec![],
-                notarized: true,
-                finalized: true,
-                participants: vec![],
-            };
+            let metadata = StreamletMetadata { votes: vec![], notarized: true, finalized: true };
 
             store.insert(&[genesis_block.header], &[metadata])?;
         }
