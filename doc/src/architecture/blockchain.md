@@ -211,11 +211,7 @@ R is the epoch length in terms of slots.
 
 # Appendix
 
-This section gives further details about the structures that will
-be used by the protocol. Since the Streamlet consensus protocol will
-be used at early stages of development, we created hybrid structures
-to enable seamless transition from Stremlet to Ouroboros Crypsinous,
-without the need of forking the blockchain.
+This section gives further details about the structures that will be used by the protocol.
 
 ## Blockchain
 
@@ -228,11 +224,11 @@ without the need of forking the blockchain.
 
 |   Field     |        Type        |            Description                     |
 |-------------|--------------------|--------------------------------------------|
-| `v`         | `u8`               | Version                                    |
-| `st`        | `blake3Hash`       | Previous block hash                        |
-| `e`         | `u64`              | Epoch                                      |
-| `sl`        | `u64`              | Slot UID                                   |
-| `time`      | `Timestamp`        | Block creation timestamp                   |
+| `version`   | `u8`               | Version                                    |
+| `state`     | `blake3Hash`       | Previous block hash                        |
+| `epoch`     | `u64`              | Epoch                                      |
+| `slot`      | `u64`              | Slot UID                                   |
+| `timestamp` | `Timestamp`        | Block creation timestamp                   |
 | `root`      | `MerkleRoot`       | Root of the transaction hashes merkle tree |
 
 
@@ -254,22 +250,24 @@ without the need of forking the blockchain.
 | `header`   | `Header`            | Header data                                      |
 | `txs`      | `Vec<Transaction>`  | Transaction payload                              |
 | `metadata` | `Metadata`          | Additional block information                     |
-| `sm`       | `StreamletMetadata` | Proposal information used by Streamlet consensus |
 
 
 ## Metadata
 
-|    Field    |         Type        |                  Description                  |
-|-------------|---------------------|-----------------------------------------------|
-| `proof`     | `VRFOutput`         | Proof the stakeholder is the block owner      |
-| `r`         | `Seed`              | Random seed for the VRF                       |
-| `s`         | `Signature`         | Block owner signature                         |
+|    Field       |         Type        |                  Description                  |
+|----------------|---------------------|-----------------------------------------------|
+| `proof`        | `VRFOutput`         | Proof the stakeholder is the block owner      |
+| `rand_seed`    | `Seed`              | Random seed for the VRF                       |
+| `signature`    | `Signature`         | Block owner signature                         |
+| `address`      | `Address`           | Block owner address                           |
+| `participants` | `Vec<Participant>`  | Nodes participating in the consensus process  |
 
 
-## Streamlet Metadata
+## Participant
 
-|    Field    |         Type        |                  Description                  |
-|-------------|---------------------|-----------------------------------------------|
-| `votes`     | `Vec<Vote>`         | Epoch votes for the block                     |
-| `notarized` | `bool`              | Block notarization flag                       |
-| `finalized` | `bool`              | Block finalization flag                       |
+|    Field      |         Type        |                  Description                  |
+|---------------|---------------------|-----------------------------------------------|
+| `public_key`  | `PublicKey`         | Node public key                               |
+| `address`     | `Address`           | Node wallet address                           |
+| `seen`        | `u64`               | Last slot node send a keep alive message      |
+| `quarantined` | `Option<u64>`       | Slot participant was quarantined by the node  |
