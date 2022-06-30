@@ -8,15 +8,13 @@ use crate::{
 };
 
 /// This struct represents a tuple of the form:
-/// (`public_key`, `node_address`, `last_slot_voted`, `last_slot_seen`,`slot_quarantined`)
+/// (`public_key`, `node_address`, `last_slot_seen`,`slot_quarantined`)
 #[derive(Debug, Clone, PartialEq, Eq, SerialEncodable, SerialDecodable)]
 pub struct Participant {
     /// Node public key
     pub public_key: PublicKey,
     /// Node wallet address
     pub address: Address,
-    /// Last slot node voted
-    pub voted: Option<u64>,
     /// Last slot node send a keep alive message
     pub seen: u64,
     /// Slot participant was quarantined by the node
@@ -25,7 +23,7 @@ pub struct Participant {
 
 impl Participant {
     pub fn new(public_key: PublicKey, address: Address, joined: u64) -> Self {
-        Self { public_key, address, voted: None, seen: joined, quarantined: None }
+        Self { public_key, address, seen: joined, quarantined: None }
     }
 }
 
