@@ -846,7 +846,7 @@ impl ValidatorState {
                     // Slot leader is always quarantined, to cover the case they become inactive the slot before
                     // becoming the leader. This can be used for slashing in the future.
                     if participant.address == leader.address {
-                        warn!(
+                        debug!(
                             "refresh_participants(): Quaranteening leader: {} (seen {})",
                             participant.address, participant.seen
                         );

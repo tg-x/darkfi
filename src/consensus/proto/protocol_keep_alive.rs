@@ -45,7 +45,7 @@ impl ProtocolKeepAlive {
     }
 
     async fn handle_receive_keep_alive(self: Arc<Self>) -> Result<()> {
-        debug!("ProtocolKeepAlive::handle_receive_participant() [START]");
+        debug!("ProtocolKeepAlive::handle_receive_keep_alive() [START]");
         let exclude_list = vec![self.channel_address.clone()];
         loop {
             let keep_alive = match self.keep_alive_sub.receive().await {
