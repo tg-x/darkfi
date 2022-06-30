@@ -1,5 +1,8 @@
 use super::{Participant, Vote};
-use crate::util::serial::{SerialDecodable, SerialEncodable};
+use crate::{
+    crypto::{address::Address, schnorr::Signature},
+    util::serial::{SerialDecodable, SerialEncodable},
+};
 
 /// This struct represents [`Block`](super::Block) information used by the Ouroboros
 /// Praos consensus protocol.
@@ -10,7 +13,9 @@ pub struct Metadata {
     /// Random seed for VRF
     pub rand_seed: String,
     /// Block owner signature
-    pub signature: String,
+    pub signature: Signature,
+    /// Block owner address
+    pub address: Address,
     /// Nodes participating in the consensus process
     pub participants: Vec<Participant>,
 }
@@ -19,10 +24,11 @@ impl Metadata {
     pub fn new(
         proof: String,
         rand_seed: String,
-        signature: String,
+        signature: Signature,
+        address: Address,
         participants: Vec<Participant>,
     ) -> Self {
-        Self { proof, rand_seed, signature, participants }
+        Self { proof, rand_seed, signature, address, participants }
     }
 }
 

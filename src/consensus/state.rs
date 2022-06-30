@@ -287,25 +287,19 @@ impl ValidatorState {
         let header =
             Header::new(prev_hash, self.slot_epoch(slot), slot, Timestamp::current_time(), root);
 
-        let metadata = Metadata::new(
-            String::from("proof"),
-            String::from("r"),
-            String::from("s"),
-            self.consensus.participants.values().cloned().collect(),
-        );
-
         let sm = StreamletMetadata::new();
 
         let signed_proposal = self.secret.sign(&header.headerhash().as_bytes()[..]);
 
-        Ok(Some(BlockProposal::new(
+        let metadata = Metadata::new(
+            String::from("proof"),
+            String::from("r"),
             signed_proposal,
             self.address,
-            header,
-            unproposed_txs,
-            metadata,
-            sm,
-        )))
+            self.consensus.participants.values().cloned().collect(),
+        );
+
+        Ok(Some(BlockProposal::new(header, unproposed_txs, metadata, sm)))
     }
 
     /// Retrieve all unconfirmed transactions not proposed in previous blocks
@@ -376,19 +370,19 @@ impl ValidatorState {
         self.refresh_participants()?;
 
         let mut leader = self.slot_leader();
-        if leader.address != proposal.address {
+        if leader.address != proposal.block.metadata.address {
             warn!(
                 "Received proposal not from slot leader ({}), but from ({})",
-                leader.address, proposal.address
+                leader.address, proposal.block.metadata.address
             );
             return Ok(None)
         }
 
-        if !leader
-            .public_key
-            .verify(proposal.block.header.headerhash().as_bytes(), &proposal.signature)
-        {
-            warn!("Proposer ({}) signature could not be verified", proposal.address);
+        if !leader.public_key.verify(
+            proposal.block.header.headerhash().as_bytes(),
+            &proposal.block.metadata.signature,
+        ) {
+            warn!("Proposer ({}) signature could not be verified", proposal.block.metadata.address);
             return Ok(None)
         }
 
