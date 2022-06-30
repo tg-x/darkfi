@@ -761,7 +761,24 @@ impl ValidatorState {
                     );
                     return false
                 }
-                // TODO: Add participant seen update here
+
+                // Updating participant last seen slot
+                let mut participant = participant.clone();
+                let slot = self.current_slot();
+                match participant.seen {
+                    Some(seen) => {
+                        if slot > seen {
+                            participant.seen = Some(slot);
+                        }
+                    }
+                    None => participant.seen = Some(slot),
+                }
+
+                // Invalidating quarantine
+                participant.quarantined = None;
+
+                self.consensus.participants.insert(participant.address, participant);
+
                 true
             }
         }
