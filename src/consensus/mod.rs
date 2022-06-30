@@ -4,15 +4,11 @@ pub use block::{Block, BlockInfo, BlockProposal, Header, ProposalChain};
 
 /// Consensus metadata
 pub mod metadata;
-pub use metadata::{Metadata, StreamletMetadata};
+pub use metadata::Metadata;
 
 /// Consensus participant
 pub mod participant;
 pub use participant::{KeepAlive, Participant};
-
-/// Consensus vote
-pub mod vote;
-pub use vote::Vote;
 
 /// Consensus state
 pub mod state;

@@ -1,4 +1,4 @@
-use super::{Participant, Vote};
+use super::Participant;
 use crate::{
     crypto::{address::Address, schnorr::Signature},
     util::serial::{SerialDecodable, SerialEncodable},
@@ -29,23 +29,5 @@ impl Metadata {
         participants: Vec<Participant>,
     ) -> Self {
         Self { proof, rand_seed, signature, address, participants }
-    }
-}
-
-/// This struct represents [`Block`](super::Block) information used by the Streamlet
-/// consensus protocol.
-#[derive(Debug, Clone, SerialEncodable, SerialDecodable)]
-pub struct StreamletMetadata {
-    /// Slot votes
-    pub votes: Vec<Vote>,
-    /// Block notarization flag
-    pub notarized: bool,
-    /// Block finalization flag
-    pub finalized: bool,
-}
-
-impl StreamletMetadata {
-    pub fn new() -> Self {
-        Self { votes: vec![], notarized: false, finalized: false }
     }
 }

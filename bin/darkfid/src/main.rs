@@ -15,7 +15,7 @@ use darkfi::{
     consensus::{
         proto::{
             ProtocolKeepAlive, ProtocolParticipant, ProtocolProposal, ProtocolSync,
-            ProtocolSyncConsensus, ProtocolTx, ProtocolVote,
+            ProtocolSyncConsensus, ProtocolTx,
         },
         state::ValidatorStatePtr,
         task::{block_sync_task, proposal_task},
@@ -392,20 +392,6 @@ async fn realmain(args: Args, ex: Arc<Executor<'_>>) -> Result<()> {
                 .register(net::SESSION_ALL, move |channel, p2p| {
                     let state = _state.clone();
                     async move { ProtocolProposal::init(channel, state, p2p).await.unwrap() }
-                })
-                .await;
-
-            let _state = state.clone();
-            let _sync_p2p = sync_p2p.clone().unwrap();
-            registry
-                .register(net::SESSION_ALL, move |channel, p2p| {
-                    let state = _state.clone();
-                    let __sync_p2p = _sync_p2p.clone();
-                    async move {
-                        ProtocolVote::init(channel, state, __sync_p2p, p2p)
-                            .await
-                            .unwrap()
-                    }
                 })
                 .await;
 

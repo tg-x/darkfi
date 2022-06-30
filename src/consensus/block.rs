@@ -4,9 +4,7 @@ use incrementalmerkletree::{bridgetree::BridgeTree, Tree};
 use log::debug;
 use rand::rngs::OsRng;
 
-use super::{
-    Metadata, StreamletMetadata, BLOCK_INFO_MAGIC_BYTES, BLOCK_MAGIC_BYTES, BLOCK_VERSION,
-};
+use super::{Metadata, BLOCK_INFO_MAGIC_BYTES, BLOCK_MAGIC_BYTES, BLOCK_VERSION};
 use crate::{
     crypto::{
         address::Address, constants::MERKLE_DEPTH, keypair::Keypair, merkle_node::MerkleNode,
@@ -125,19 +123,12 @@ pub struct BlockInfo {
     pub txs: Vec<Transaction>,
     /// Additional proposal information
     pub metadata: Metadata,
-    /// Proposal information used by Streamlet consensus
-    pub sm: StreamletMetadata,
 }
 
 impl BlockInfo {
-    pub fn new(
-        header: Header,
-        txs: Vec<Transaction>,
-        metadata: Metadata,
-        sm: StreamletMetadata,
-    ) -> Self {
+    pub fn new(header: Header, txs: Vec<Transaction>, metadata: Metadata) -> Self {
         let magic = *BLOCK_INFO_MAGIC_BYTES;
-        Self { magic, header, txs, metadata, sm }
+        Self { magic, header, txs, metadata }
     }
 }
 
@@ -171,13 +162,8 @@ pub struct BlockProposal {
 
 impl BlockProposal {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        header: Header,
-        txs: Vec<Transaction>,
-        metadata: Metadata,
-        sm: StreamletMetadata,
-    ) -> Self {
-        let block = BlockInfo::new(header, txs, metadata, sm);
+    pub fn new(header: Header, txs: Vec<Transaction>, metadata: Metadata) -> Self {
+        let block = BlockInfo::new(header, txs, metadata);
         Self { block }
     }
 }
@@ -267,17 +253,6 @@ impl ProposalChain {
         if self.check_proposal(proposal, self.proposals.last().unwrap()) {
             self.proposals.push(proposal.clone());
         }
-    }
-
-    /// Proposals chain notarization check.
-    pub fn notarized(&self) -> bool {
-        for proposal in &self.proposals {
-            if !proposal.block.sm.notarized {
-                return false
-            }
-        }
-
-        true
     }
 }
 

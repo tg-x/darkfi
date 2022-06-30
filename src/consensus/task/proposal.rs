@@ -104,25 +104,14 @@ pub async fn proposal_task(
 
         info!("consensus: Node is the slot leader: Proposed block: {}", proposal);
         debug!("consensus: Full proposal: {:?}", proposal);
-        let vote = state.write().await.receive_proposal(&proposal);
-        let vote = match vote {
-            Ok(v) => {
-                if v.is_none() {
-                    debug!("proposal_task(): Node did not vote for the proposed block");
-                    continue
+        match state.write().await.receive_proposal(&proposal).await {
+            Ok(to_broadcast) => {
+                info!("consensus: Block proposal  saved successfully");
+                // Broadcast block to other consensus nodes
+                match consensus_p2p.broadcast(proposal).await {
+                    Ok(()) => info!("consensus: Proposal broadcasted successfully"),
+                    Err(e) => error!("consensus: Failed broadcasting proposal: {}", e),
                 }
-                v.unwrap()
-            }
-            Err(e) => {
-                error!("consensus: Failed processing proposal: {}", e);
-                continue
-            }
-        };
-
-        let result = state.write().await.receive_vote(&vote).await;
-        match result {
-            Ok((_, to_broadcast)) => {
-                info!("consensus: Vote saved successfully");
                 // Broadcast finalized blocks info, if any:
                 if let Some(blocks) = to_broadcast {
                     info!("consensus: Broadcasting finalized blocks");
@@ -137,21 +126,8 @@ pub async fn proposal_task(
                 }
             }
             Err(e) => {
-                error!("consensus: Vote save failed: {}", e);
-                // TODO: Is this fallthrough ok?
+                error!("consensus: Block proposal save failed: {}", e);
             }
-        }
-
-        // Broadcast block to other consensus nodes
-        match consensus_p2p.broadcast(proposal).await {
-            Ok(()) => info!("consensus: Proposal broadcasted successfully"),
-            Err(e) => error!("consensus: Failed broadcasting proposal: {}", e),
-        }
-
-        // Broadcast leader vote
-        match consensus_p2p.broadcast(vote).await {
-            Ok(()) => info!("consensus: Leader vote broadcasted successfully"),
-            Err(e) => error!("consensus: Failed broadcasting leader vote: {}", e),
         }
     }
 }

@@ -15,9 +15,6 @@ use crate::{
 pub mod blockstore;
 pub use blockstore::{BlockOrderStore, BlockStore, HeaderStore};
 
-pub mod metadatastore;
-pub use metadatastore::StreamletMetadataStore;
-
 pub mod nfstore;
 pub use nfstore::NullifierStore;
 
@@ -37,8 +34,6 @@ pub struct Blockchain {
     pub order: BlockOrderStore,
     /// Transactions sled tree
     pub transactions: TxStore,
-    /// Streamlet metadata sled tree
-    pub streamlet_metadata: StreamletMetadataStore,
     /// Nullifiers sled tree
     pub nullifiers: NullifierStore,
     /// Merkle roots sled tree
@@ -51,20 +46,11 @@ impl Blockchain {
         let headers = HeaderStore::new(db, genesis_ts, genesis_data)?;
         let blocks = BlockStore::new(db, genesis_ts, genesis_data)?;
         let order = BlockOrderStore::new(db, genesis_ts, genesis_data)?;
-        let streamlet_metadata = StreamletMetadataStore::new(db, genesis_ts, genesis_data)?;
         let transactions = TxStore::new(db)?;
         let nullifiers = NullifierStore::new(db)?;
         let merkle_roots = RootStore::new(db)?;
 
-        Ok(Self {
-            headers,
-            blocks,
-            order,
-            transactions,
-            streamlet_metadata,
-            nullifiers,
-            merkle_roots,
-        })
+        Ok(Self { headers, blocks, order, transactions, nullifiers, merkle_roots })
     }
 
     /// Insert a given slice of [`BlockInfo`] into the blockchain database.
@@ -89,9 +75,6 @@ impl Blockchain {
 
             // Store block order
             self.order.insert(&[block.header.slot], &[headerhash[0]])?;
-
-            // Store streamlet metadata
-            self.streamlet_metadata.insert(&[headerhash[0]], &[block.sm.clone()])?;
 
             // NOTE: The nullifiers and Merkle roots are applied in the state
             // transition apply function.
@@ -119,17 +102,15 @@ impl Blockchain {
 
         let headers = self.headers.get(hashes, true)?;
         let blocks = self.blocks.get(hashes, true)?;
-        let metadata = self.streamlet_metadata.get(hashes, true)?;
 
         for (i, header) in headers.iter().enumerate() {
             let header = header.clone().unwrap();
             let block = blocks[i].clone().unwrap();
-            let sm = metadata[i].clone().unwrap();
 
             let txs = self.transactions.get(&block.txs, true)?;
             let txs = txs.iter().map(|x| x.clone().unwrap()).collect();
 
-            let info = BlockInfo::new(header, txs, block.metadata.clone(), sm);
+            let info = BlockInfo::new(header, txs, block.metadata.clone());
             ret.push(info);
         }
 
