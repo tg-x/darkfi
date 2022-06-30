@@ -4,16 +4,14 @@ use std::{fs::File, io::Write};
 use darkfi::{
     blockchain::{
         blockstore::{BlockOrderStore, BlockStore, HeaderStore},
-        metadatastore::StreamletMetadataStore,
         txstore::TxStore,
         Blockchain,
     },
     consensus::{
         block::{Block, BlockProposal, Header, ProposalChain},
-        metadata::{Metadata, StreamletMetadata},
+        metadata::Metadata,
         participant::Participant,
         state::{ConsensusState, ValidatorState},
-        vote::Vote,
         TESTNET_GENESIS_HASH_BYTES,
     },
     crypto::{merkle_node::MerkleNode, token_list::DrkTokenList},
@@ -27,85 +25,43 @@ use darkfi::{
 #[derive(Debug)]
 struct ParticipantInfo {
     _address: String,
-    _joined: u64,
-    _voted: Option<u64>,
+    _seen: u64,
+    _quarantined: Option<u64>,
 }
 
 impl ParticipantInfo {
     pub fn new(participant: &Participant) -> ParticipantInfo {
         let _address = participant.address.to_string();
-        let _joined = participant.joined;
-        let _voted = participant.voted;
-        ParticipantInfo { _address, _joined, _voted }
-    }
-}
-
-#[derive(Debug)]
-struct VoteInfo {
-    _proposal: blake3::Hash,
-    _slot: u64,
-    _address: String,
-}
-
-impl VoteInfo {
-    pub fn new(vote: &Vote) -> VoteInfo {
-        let _proposal = vote.proposal;
-        let _slot = vote.slot;
-        let _address = vote.address.to_string();
-        VoteInfo { _proposal, _slot, _address }
-    }
-}
-
-#[derive(Debug)]
-struct StreamletMetadataInfo {
-    _votes: Vec<VoteInfo>,
-    _notarized: bool,
-    _finalized: bool,
-    _participants: Vec<ParticipantInfo>,
-}
-
-impl StreamletMetadataInfo {
-    pub fn new(metadata: &StreamletMetadata) -> StreamletMetadataInfo {
-        let mut _votes = Vec::new();
-        for vote in &metadata.votes {
-            _votes.push(VoteInfo::new(&vote));
-        }
-        let _notarized = metadata.notarized;
-        let _finalized = metadata.finalized;
-        let mut _participants = Vec::new();
-        for participant in &metadata.participants {
-            _participants.push(ParticipantInfo::new(&participant));
-        }
-        StreamletMetadataInfo { _votes, _notarized, _finalized, _participants }
+        let _seen = participant.seen;
+        let _quarantined = participant.quarantined;
+        ParticipantInfo { _address, _seen, _quarantined }
     }
 }
 
 #[derive(Debug)]
 struct MetadataInfo {
-    _proof: String,
-    _rand_seed: String,
-    _signature: String,
+    _address: String,
+    _participants: Vec<ParticipantInfo>,
 }
 
 impl MetadataInfo {
     pub fn new(metadata: &Metadata) -> MetadataInfo {
-        let _proof = metadata.proof.clone();
-        let _rand_seed = metadata.rand_seed.clone();
-        let _signature = metadata.signature.clone();
-        MetadataInfo { _proof, _rand_seed, _signature }
+        let _address = metadata.address.to_string();
+        let mut _participants = vec![];
+        for participant in &metadata.participants {
+            _participants.push(ParticipantInfo::new(&participant));
+        }
+        MetadataInfo { _address, _participants }
     }
 }
 
 #[derive(Debug)]
 struct ProposalInfo {
-    _address: String,
     _block: BlockInfo,
-    _sm: StreamletMetadataInfo,
 }
 
 impl ProposalInfo {
     pub fn new(proposal: &BlockProposal) -> ProposalInfo {
-        let _address = proposal.address.to_string();
         let _header = proposal.block.header.headerhash();
         let mut _txs = vec![];
         for tx in &proposal.block.txs {
@@ -115,8 +71,7 @@ impl ProposalInfo {
         let _metadata = MetadataInfo::new(&proposal.block.metadata);
         let _block =
             BlockInfo { _hash: _header, _magic: proposal.block.magic, _header, _txs, _metadata };
-        let _sm = StreamletMetadataInfo::new(&proposal.block.sm);
-        ProposalInfo { _address, _block, _sm }
+        ProposalInfo { _block }
     }
 }
 
@@ -304,46 +259,11 @@ impl TxStoreInfo {
 }
 
 #[derive(Debug)]
-struct HashedMetadataInfo {
-    _block: blake3::Hash,
-    _metadata: StreamletMetadataInfo,
-}
-
-impl HashedMetadataInfo {
-    pub fn new(_block: blake3::Hash, metadata: &StreamletMetadata) -> HashedMetadataInfo {
-        let _metadata = StreamletMetadataInfo::new(&metadata);
-        HashedMetadataInfo { _block, _metadata }
-    }
-}
-
-#[derive(Debug)]
-struct MetadataStoreInfo {
-    _metadata: Vec<HashedMetadataInfo>,
-}
-
-impl MetadataStoreInfo {
-    pub fn new(metadatastore: &StreamletMetadataStore) -> MetadataStoreInfo {
-        let mut _metadata = Vec::new();
-        let result = metadatastore.get_all();
-        match result {
-            Ok(iter) => {
-                for (hash, m) in iter.iter() {
-                    _metadata.push(HashedMetadataInfo::new(hash.clone(), &m));
-                }
-            }
-            Err(e) => println!("Error: {:?}", e),
-        }
-        MetadataStoreInfo { _metadata }
-    }
-}
-
-#[derive(Debug)]
 struct BlockchainInfo {
     _headers: HeaderStoreInfo,
     _blocks: BlockInfoChain,
     _order: BlockOrderStoreInfo,
     _transactions: TxStoreInfo,
-    _metadata: MetadataStoreInfo,
 }
 
 impl BlockchainInfo {
@@ -352,8 +272,7 @@ impl BlockchainInfo {
         let _blocks = BlockInfoChain::new(&blockchain.blocks);
         let _order = BlockOrderStoreInfo::new(&blockchain.order);
         let _transactions = TxStoreInfo::new(&blockchain.transactions);
-        let _metadata = MetadataStoreInfo::new(&blockchain.streamlet_metadata);
-        BlockchainInfo { _headers, _blocks, _order, _transactions, _metadata }
+        BlockchainInfo { _headers, _blocks, _order, _transactions }
     }
 }
 
