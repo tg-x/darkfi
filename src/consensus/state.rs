@@ -291,6 +291,11 @@ impl ValidatorState {
             self.address,
             self.consensus.participants.values().cloned().collect(),
         );
+        
+        // TODO: [PLACEHOLDER] Add balance proof creation
+        // TODO: [PLACEHOLDER] Add crypsinous leader proof creation (to replace balance proof)
+        // TODO: [PLACEHOLDER] Add rewards calculation (proof?)
+        // TODO: [PLACEHOLDER] Create and add rewards transaction
 
         Ok(Some(BlockProposal::new(header, unproposed_txs, metadata)))
     }
@@ -382,6 +387,10 @@ impl ValidatorState {
             warn!("Proposer ({}) signature could not be verified", proposal.block.metadata.address);
             return Ok(None)
         }
+        
+        // TODO: [PLACEHOLDER] Add balance proof validation
+        // TODO: [PLACEHOLDER] Add crypsinous proof validation (to replace balance proof)
+        // TODO: [PLACEHOLDER] Add rewards validation
 
         if current > leader.seen {
             leader.seen = current;
@@ -565,6 +574,8 @@ impl ValidatorState {
         if self.consensus.pending_participants.contains(&participant) {
             return false
         }
+        
+        // TODO: [PLACEHOLDER] Add balance proof validation
 
         self.consensus.pending_participants.push(participant);
         true
@@ -589,6 +600,8 @@ impl ValidatorState {
                     );
                     return false
                 }
+                
+                // TODO: [PLACEHOLDER] Add balance proof validation 
 
                 // Updating participant last seen slot
                 let mut participant = participant.clone();

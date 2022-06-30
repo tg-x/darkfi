@@ -18,6 +18,8 @@ pub async fn proposal_task(
     state: ValidatorStatePtr,
     ex: Arc<Executor<'_>>,
 ) {
+    // TODO: [PLACEHOLDER] Add balance proof creation
+
     // Node waits just before the current or next slot end, so it can
     // start syncing latest state.
     let mut seconds_until_next_slot = state.read().await.next_n_slot_start(1);

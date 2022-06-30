@@ -26,6 +26,8 @@ pub async fn keep_alive_task(
 
             // Sleep until that slot
             sleep(seconds).await;
+            
+            // TODO: [PLACEHOLDER] Add balance proof creation
 
             // Create keep alive message
             let secret = state.read().await.secret;
