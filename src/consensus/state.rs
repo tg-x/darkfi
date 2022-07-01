@@ -291,7 +291,7 @@ impl ValidatorState {
             self.address,
             self.consensus.participants.values().cloned().collect(),
         );
-        
+
         // TODO: [PLACEHOLDER] Add balance proof creation
         // TODO: [PLACEHOLDER] Add crypsinous leader proof creation (to replace balance proof)
         // TODO: [PLACEHOLDER] Add rewards calculation (proof?)
@@ -387,7 +387,7 @@ impl ValidatorState {
             warn!("Proposer ({}) signature could not be verified", proposal.block.metadata.address);
             return Ok(None)
         }
-        
+
         // TODO: [PLACEHOLDER] Add balance proof validation
         // TODO: [PLACEHOLDER] Add crypsinous proof validation (to replace balance proof)
         // TODO: [PLACEHOLDER] Add rewards validation
@@ -574,7 +574,7 @@ impl ValidatorState {
         if self.consensus.pending_participants.contains(&participant) {
             return false
         }
-        
+
         // TODO: [PLACEHOLDER] Add balance proof validation
 
         self.consensus.pending_participants.push(participant);
@@ -592,7 +592,13 @@ impl ValidatorState {
                 false
             }
             Some(participant) => {
-                let serialized = serialize(&participant.address);
+                let current = self.current_slot();
+                if current != keep_alive.slot {
+                    warn!("keep alive message slot is not current one for: {}", keep_alive.address);
+                    return false
+                }
+
+                let serialized = serialize(&current);
                 if !participant.public_key.verify(&serialized, &keep_alive.signature) {
                     warn!(
                         "Keep alive message signature could not be verified for: {}",
@@ -600,15 +606,12 @@ impl ValidatorState {
                     );
                     return false
                 }
-                
-                // TODO: [PLACEHOLDER] Add balance proof validation 
+
+                // TODO: [PLACEHOLDER] Add balance proof validation
 
                 // Updating participant last seen slot
                 let mut participant = participant.clone();
-                let slot = self.current_slot();
-                if slot > participant.seen {
-                    participant.seen = slot;
-                }
+                participant.seen = current;
 
                 // Invalidating quarantine
                 participant.quarantined = None;

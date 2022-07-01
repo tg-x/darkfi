@@ -26,15 +26,16 @@ pub async fn keep_alive_task(
 
             // Sleep until that slot
             sleep(seconds).await;
-            
+
             // TODO: [PLACEHOLDER] Add balance proof creation
 
             // Create keep alive message
             let secret = state.read().await.secret;
             let address = state.read().await.address;
-            let serialized = serialize(&address);
+            let slot = state.read().await.current_slot();
+            let serialized = serialize(&slot);
             let signature = secret.sign(&serialized);
-            let keep_alive = KeepAlive { address, signature };
+            let keep_alive = KeepAlive { address, slot, signature };
 
             // Broadcast keep alive message
             match p2p.broadcast(keep_alive).await {

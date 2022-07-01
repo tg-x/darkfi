@@ -58,12 +58,14 @@ impl Decodable for BTreeMap<Address, Participant> {
 
 impl_vec!(Participant);
 
-/// Struct represending a keep alive message, containing signed node address
+/// Struct represending a keep alive message, containing signed slot for validation
 #[derive(Debug, Clone, SerialEncodable, SerialDecodable)]
 pub struct KeepAlive {
-    /// Leader address
+    /// Node address
     pub address: Address,
-    /// Address signature
+    /// Slot message was send
+    pub slot: u64,
+    /// Slot signature
     pub signature: Signature,
 }
 
