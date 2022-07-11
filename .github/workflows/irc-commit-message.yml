@@ -1,5 +1,5 @@
 name: "Push Notification"
-on: [push, pull_request, create]
+on: [push, pull_request]
 
 jobs:
   test:
@@ -9,7 +9,7 @@ jobs:
         uses: rectalogic/notify-irc@v1
         if: github.event_name == 'push'
         with:
-          channel: "#dev"
+          channel: "#test"
           server: "irc1.dark.fi"
           nickname: github-notifier
           message: |
@@ -19,17 +19,8 @@ jobs:
         uses: rectalogic/notify-irc@v1
         if: github.event_name == 'pull_request'
         with:
-          channel: "#dev"
+          channel: "#test"
           server: "irc1.dark.fi"
           nickname: github-notifier
           message: |
             ${{ github.actor }} opened PR ${{ github.event.pull_request.html_url }}
-      - name: irc tag created
-        uses: rectalogic/notify-irc@v1
-        if: github.event_name == 'create' && github.event.ref_type == 'tag'
-        with:
-          channel: "#dev"
-          server: "irc1.dark.fi"
-          nickname: github-notifier
-          message: |
-            ${{ github.actor }} tagged ${{ github.repository }} ${{ github.event.ref }}
