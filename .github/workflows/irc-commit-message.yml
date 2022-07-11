@@ -9,7 +9,7 @@ jobs:
         uses: rectalogic/notify-irc@v1
         if: github.event_name == 'push'
         with:
-          channel: "#test"
+          channel: "#dev"
           server: "irc1.dark.fi"
           nickname: github-notifier
           message: |
@@ -19,7 +19,7 @@ jobs:
         uses: rectalogic/notify-irc@v1
         if: github.event_name == 'pull_request'
         with:
-          channel: "#test"
+          channel: "#dev"
           server: "irc1.dark.fi"
           nickname: github-notifier
           message: |
