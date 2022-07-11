@@ -1,4 +1,4 @@
-name: "Push Notification"
+name: "Push Notification IRC"
 on: [push, pull_request]
 
 jobs:
